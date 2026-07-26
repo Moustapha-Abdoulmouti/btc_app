@@ -1,0 +1,25 @@
+{
+  "task": "classification",
+  "model_file": "model_v1.keras",
+  "feature_scaler": "fscaler_v1.pkl",
+  "target_scaler": null,
+  "features": [
+    "ret_1",
+    "ret_5",
+    "rsi",
+    "close_ema12",
+    "close_ema26",
+    "ema_cross",
+    "vol_chg",
+    "volatility"
+  ],
+  "look_back": 60,
+  "horizon": 5,
+  "classes": [
+    "Sell",
+    "Hold",
+    "Buy"
+  ],
+  "version": "v1",
+  "trained_on": "2020-01-26 to 2026-07-05"
+}
