@@ -67,9 +67,6 @@ def load_live():
     return d
 
 
-def scale_window(win, fscaler):
-    n = win.shape[2]
-    return fscaler.transform(win.reshape(-1, n)).reshape(win.shape)
 
 
 # ---------- UI ----------
@@ -107,7 +104,7 @@ if use_live:
 if df is None:
     df, source = load_static(), "static"
 
-latest_date = df["Date"].iloc[-1].date()
+
 
 # ---------- SOURCE BADGE (this tells you live vs static) ----------
 if source == "live":
@@ -120,8 +117,7 @@ else:
         with st.expander("Why live data failed"):
             st.code(live_error)
 
-if len(df) < look_back:
-    st.error(f"Not enough data: need {look_back} rows, have {len(df)}."); st.stop()
+
 
 # ---------- predict on the most recent window ----------
 win = df[features].tail(look_back).values.astype("float32").reshape(1, look_back, len(features))
