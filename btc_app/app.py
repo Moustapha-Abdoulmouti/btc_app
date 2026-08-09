@@ -37,10 +37,10 @@ def load_static():
 @st.cache_data(ttl=1800, show_spinner=False)
 def load_live():
     import yfinance as yf, ta
-    raw = yf.download("BTC-USD", period="max", interval="1d",
-                      auto_adjust=True, progress=False)
+    raw = yf.download("BTC-USD", period="730d", interval="1d",
+                      auto_adjust=True, progress=False, threads=False)
     if raw is None or len(raw) == 0:
-        return None
+        raise ValueError("Yahoo returned no data (empty response).")
     if isinstance(raw.columns, pd.MultiIndex):
         raw.columns = raw.columns.get_level_values(0)
     d = raw.reset_index()
@@ -62,6 +62,8 @@ def load_live():
     feats = ["ret_1", "ret_5", "rsi", "close_ema12", "close_ema26",
              "ema_cross", "vol_chg", "volatility"]
     d = d.dropna(subset=feats).reset_index(drop=True)
+    if len(d) == 0:
+        raise ValueError("Feature engineering dropped all rows (not enough raw data).")
     return d
 
 
@@ -91,14 +93,17 @@ with st.sidebar:
         load_live.clear(); st.rerun()
 
 # pick source
-df, source = None, None
+df, source, live_error = None, None, None
 if use_live:
     try:
         live = load_live()
         if live is not None and len(live) >= look_back:
             df, source = live, "live"
-    except Exception:
-        df = None
+        else:
+            live_error = "Live data returned fewer rows than look_back window."
+    except Exception as e:
+        live_error = f"{type(e).__name__}: {e}"
+
 if df is None:
     df, source = load_static(), "static"
 
@@ -111,15 +116,9 @@ if source == "live":
 else:
     st.warning(f"🟡 **STATIC dataset** — fixed snapshot up to **{latest_date}**. "
                f"Live fetch was off or unavailable, so the app is using the bundled file.")
-
-with st.sidebar:
-    st.divider()
-    st.write(f"**Source:** {'🟢 Live' if source=='live' else '🟡 Static file'}")
-    st.write(f"**Signal date:** {latest_date}")
-    st.write(f"**Model:** {cfg.get('version','?')} · {cfg.get('task')}")
-    st.write(f"**Look-back:** {look_back} d · **Horizon:** +{cfg.get('horizon')} d")
-    st.write(f"**Rows:** {len(df)}")
-    days = st.slider("Chart days", 30, 365, 120, step=10)
+    if live_error:
+        with st.expander("Why live data failed"):
+            st.code(live_error)
 
 if len(df) < look_back:
     st.error(f"Not enough data: need {look_back} rows, have {len(df)}."); st.stop()
